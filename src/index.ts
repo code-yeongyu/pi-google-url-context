@@ -6,7 +6,6 @@ type ToolDefinition = Record<string, unknown>;
 const ENABLE_ENV = "PI_GOOGLE_URL_CONTEXT";
 const STATUS_KEY = "pi-google-url-context";
 const WIDGET_KEY = "pi-google-url-context";
-const WIDGET_LINES = ["Native URL Context", "Google · urlContext · URL metadata visible in assistant output"];
 
 function parseEnableEnv(envVar: string): boolean {
 	const envValue = process.env[envVar];
@@ -58,14 +57,7 @@ function clearUi(ctx: ExtensionContext): void {
 }
 
 function syncUi(ctx: ExtensionContext): void {
-	if (!ctx.hasUI) return;
-	if (!isGoogleApi(ctx.model?.api) || !isGoogleUrlContextEnabled()) {
-		clearUi(ctx);
-		return;
-	}
-
-	ctx.ui.setStatus(STATUS_KEY, undefined);
-	ctx.ui.setWidget(WIDGET_KEY, WIDGET_LINES, { placement: "belowEditor" });
+	clearUi(ctx);
 }
 
 export function addGoogleUrlContextToPayload(api: Api | undefined, payload: unknown): unknown {

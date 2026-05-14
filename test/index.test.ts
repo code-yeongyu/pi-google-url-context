@@ -47,11 +47,7 @@ describe("google-url-context extension", () => {
 		);
 
 		expect(setStatus).toHaveBeenCalledWith("pi-google-url-context", undefined);
-		expect(setWidget).toHaveBeenCalledWith(
-			"pi-google-url-context",
-			["Native URL Context", "Google · urlContext · URL metadata visible in assistant output"],
-			{ placement: "belowEditor" },
-		);
+		expect(setWidget).toHaveBeenCalledWith("pi-google-url-context", undefined);
 	});
 
 	it("is a no-op when api is anthropic-messages", () => {
