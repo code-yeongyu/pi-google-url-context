@@ -1,9 +1,12 @@
 import type { Api } from "@mariozechner/pi-ai";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 
 type ToolDefinition = Record<string, unknown>;
 
 const ENABLE_ENV = "PI_GOOGLE_URL_CONTEXT";
+const STATUS_KEY = "pi-google-url-context";
+const WIDGET_KEY = "pi-google-url-context";
+const WIDGET_LINES = ["Native URL Context", "Google · urlContext · URL metadata visible in assistant output"];
 
 function parseEnableEnv(envVar: string): boolean {
 	const envValue = process.env[envVar];
@@ -48,6 +51,23 @@ export function isGoogleUrlContextEnabled(): boolean {
 	return parseEnableEnv(ENABLE_ENV);
 }
 
+function clearUi(ctx: ExtensionContext): void {
+	if (!ctx.hasUI) return;
+	ctx.ui.setStatus(STATUS_KEY, undefined);
+	ctx.ui.setWidget(WIDGET_KEY, undefined);
+}
+
+function syncUi(ctx: ExtensionContext): void {
+	if (!ctx.hasUI) return;
+	if (!isGoogleApi(ctx.model?.api) || !isGoogleUrlContextEnabled()) {
+		clearUi(ctx);
+		return;
+	}
+
+	ctx.ui.setStatus(STATUS_KEY, "urlContext native");
+	ctx.ui.setWidget(WIDGET_KEY, WIDGET_LINES, { placement: "belowEditor" });
+}
+
 export function addGoogleUrlContextToPayload(api: Api | undefined, payload: unknown): unknown {
 	if (!isGoogleApi(api)) {
 		return payload;
@@ -88,6 +108,18 @@ when the user references specific URLs they want analyzed.
 export default function googleUrlContextExtension(pi: ExtensionAPI): void {
 	pi.on("before_provider_request", (event, ctx) => {
 		return addGoogleUrlContextToPayload(ctx.model?.api, event.payload);
+	});
+
+	pi.on("session_start", async (_event, ctx) => {
+		syncUi(ctx);
+	});
+
+	pi.on("model_select", async (_event, ctx) => {
+		syncUi(ctx);
+	});
+
+	pi.on("session_shutdown", async (_event, ctx) => {
+		clearUi(ctx);
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {

@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import googleUrlContextExtension, {
 	addGoogleUrlContextToPayload,
 	GOOGLE_URL_CONTEXT_SECTION,
@@ -8,11 +8,52 @@ import googleUrlContextExtension, {
 
 const ENABLE_ENV = "PI_GOOGLE_URL_CONTEXT";
 
+type TestUi = {
+	setStatus: (key: string, value: string | undefined) => void;
+	setWidget: (key: string, lines: string[] | undefined, options?: { placement: "belowEditor" }) => void;
+	theme: { fg: (key: string, value: string) => string };
+};
+
 afterEach(() => {
 	delete process.env[ENABLE_ENV];
 });
 
 describe("google-url-context extension", () => {
+	it("shows native url context widget for Google sessions", async () => {
+		type SessionStartHandler = (
+			event: object,
+			ctx: { model?: { api?: string }; hasUI?: boolean; ui: TestUi },
+		) => Promise<void> | void;
+
+		let sessionStartHandler: SessionStartHandler | undefined;
+		const setStatus = vi.fn();
+		const setWidget = vi.fn();
+		const pi = {
+			on(eventName: string, handler: unknown) {
+				if (eventName === "session_start") {
+					sessionStartHandler = handler as SessionStartHandler;
+				}
+			},
+		} satisfies Pick<ExtensionAPI, "on">;
+
+		googleUrlContextExtension(pi as ExtensionAPI);
+		await sessionStartHandler?.(
+			{},
+			{
+				model: { api: "google-generative-ai" },
+				hasUI: true,
+				ui: { setStatus, setWidget, theme: { fg: (_key: string, value: string) => value } },
+			},
+		);
+
+		expect(setStatus).toHaveBeenCalledWith("pi-google-url-context", "urlContext native");
+		expect(setWidget).toHaveBeenCalledWith(
+			"pi-google-url-context",
+			["Native URL Context", "Google · urlContext · URL metadata visible in assistant output"],
+			{ placement: "belowEditor" },
+		);
+	});
+
 	it("is a no-op when api is anthropic-messages", () => {
 		const payload = {
 			tools: [{ urlContext: {} }],
@@ -196,15 +237,21 @@ describe("google-url-context extension", () => {
 	});
 
 	it("registers provider-request and agent-start hooks", async () => {
-		const hooks: Array<{ event: string; handler: (...args: unknown[]) => unknown }> = [];
+		const hooks: Array<{ event: string; handler: unknown }> = [];
 		const pi = {
-			on: (event: string, handler: (...args: unknown[]) => unknown) => {
-				hooks.push({ event, handler });
+			on(eventName: string, handler: unknown) {
+				hooks.push({ event: eventName, handler });
 			},
-		} as unknown as ExtensionAPI;
+		} satisfies Pick<ExtensionAPI, "on">;
 
-		googleUrlContextExtension(pi);
+		googleUrlContextExtension(pi as ExtensionAPI);
 
-		expect(hooks.map((hook) => hook.event)).toEqual(["before_provider_request", "before_agent_start"]);
+		expect(hooks.map((hook) => hook.event)).toEqual([
+			"before_provider_request",
+			"session_start",
+			"model_select",
+			"session_shutdown",
+			"before_agent_start",
+		]);
 	});
 });
