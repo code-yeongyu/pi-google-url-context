@@ -64,7 +64,7 @@ function syncUi(ctx: ExtensionContext): void {
 		return;
 	}
 
-	ctx.ui.setStatus(STATUS_KEY, "urlContext native");
+	ctx.ui.setStatus(STATUS_KEY, undefined);
 	ctx.ui.setWidget(WIDGET_KEY, WIDGET_LINES, { placement: "belowEditor" });
 }
 
