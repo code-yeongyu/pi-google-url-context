@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import googleUrlContextExtension, {
 	addGoogleUrlContextToPayload,
@@ -33,6 +33,7 @@ describe("google-url-context extension", () => {
 				if (eventName === "session_start") {
 					sessionStartHandler = handler as SessionStartHandler;
 				}
+				return () => {};
 			},
 		} satisfies Pick<ExtensionAPI, "on">;
 
@@ -237,6 +238,7 @@ describe("google-url-context extension", () => {
 		const pi = {
 			on(eventName: string, handler: unknown) {
 				hooks.push({ event: eventName, handler });
+				return () => {};
 			},
 		} satisfies Pick<ExtensionAPI, "on">;
 
